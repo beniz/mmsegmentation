@@ -88,6 +88,7 @@ def _demo_mm_inputs(input_shape, num_classes):
 
 def pytorch2libtorch(model,
                      input_shape,
+                     only_backbone=False,
                      show=False,
                      output_file='tmp.pt',
                      verify=False):
@@ -110,11 +111,14 @@ def pytorch2libtorch(model,
         num_classes = model.decode_head.num_classes
 
     mm_inputs = _demo_mm_inputs(input_shape, num_classes)
-
     imgs = mm_inputs.pop('imgs')
 
-    # replace the original forword with forward_dummy
-    model.forward = model.forward_dummy
+    if only_backbone:
+        model = model.backbone
+    else:
+        # replace the original forword with forward_dummy
+        model.forward = model.forward_dummy
+
     model.eval()
     traced_model = torch.jit.trace(
         model,
@@ -133,6 +137,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='Convert MMSeg to TorchScript')
     parser.add_argument('config', help='test config file path')
+    parser.add_argument("--only_backbone", action="store_true", help="Export only the backbone")
     parser.add_argument('--checkpoint', help='checkpoint file', default=None)
     parser.add_argument(
         '--show', action='store_true', help='show TorchScript graph')
@@ -187,6 +192,7 @@ if __name__ == '__main__':
     pytorch2libtorch(
         segmentor,
         input_shape,
+        only_backbone=args.only_backbone,
         show=args.show,
         output_file=args.output_file,
         verify=args.verify)
